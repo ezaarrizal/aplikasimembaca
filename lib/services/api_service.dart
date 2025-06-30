@@ -8,9 +8,10 @@ import '../models/api_response.dart';
 import '../models/feedback_list_response.dart';
 import '../models/feedback_response.dart';
 import 'storage_service.dart';
+import '../config/api_config.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8000/api/v1'; // Ganti dengan URL server Anda
+  static String get baseUrl => ApiConfig.baseUrl; // Ganti dengan URL server Anda
   
   final StorageService _storageService = StorageService();
 
