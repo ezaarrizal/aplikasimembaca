@@ -1,0 +1,181 @@
+// lib/main.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+// Import providers
+import 'providers/auth_provider.dart';
+import 'providers/user_management_provider.dart';
+import 'providers/feedback_provider.dart';
+
+// Import screens
+import 'screens/login_screen.dart';
+import 'screens/guru/guru_dashboard_screen.dart';
+import 'screens/siswa/siswa_dashboard_screen.dart';
+import 'screens/orangtua/orangtua_dashboard_screen.dart';
+import 'screens/feedback/feedback_list_screen.dart';
+import 'screens/feedback/create_feedback_screen.dart';
+import 'screens/feedback/feedback_detail_screen.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserManagementProvider()),
+        ChangeNotifierProvider(create: (_) => FeedbackProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Aplikasi Membaca Edukatif',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          fontFamily: 'Inter',
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: const LoginScreen(),
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/guru/dashboard': (context) => const GuruDashboardScreen(),
+          '/siswa/dashboard': (context) => const SiswaDashboardScreen(),
+          '/orangtua/dashboard': (context) => const OrangtuaDashboardScreen(),
+          
+          // Feedback routes
+          '/guru/feedback': (context) => const FeedbackListScreen(isParentMode: false),
+          '/orangtua/feedback': (context) => const FeedbackListScreen(isParentMode: true),
+        },
+        onGenerateRoute: (settings) {
+          // Handle dynamic routes jika diperlukan
+          switch (settings.name) {
+            case '/feedback/create':
+              return MaterialPageRoute(
+                builder: (context) => const CreateFeedbackScreen(),
+              );
+            case '/feedback/detail':
+              final args = settings.arguments as Map<String, dynamic>?;
+              if (args != null) {
+                return MaterialPageRoute(
+                  builder: (context) => FeedbackDetailScreen(
+                    feedback: args['feedback'],
+                    isParentMode: args['isParentMode'] ?? false,
+                  ),
+                );
+              }
+              break;
+          }
+          return null;
+        },
+        debugShowCheckedModeBanner: false,
+      ),
+    );
+  }
+}
+
+
+
+
+NOW
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/user_management_provider.dart';
+import 'providers/feedback_provider.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/guru/guru_dashboard.dart';
+import 'screens/guru/user_management_screen.dart';
+import 'screens/siswa/siswa_dashboard.dart';
+import 'screens/orangtua/orangtua_dashboard.dart';
+import 'screens/splash_screen.dart';
+import 'screens/feedback/feedback_list_screen.dart';
+void main() {
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserManagementProvider()),
+        ChangeNotifierProvider(create: (_) => FeedbackProvider()),
+      ],
+      child: MaterialApp(
+        title: 'Aplikasi Membaca Edukatif',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF6C63FF),
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          fontFamily: 'Inter',
+        ),
+        home: const AuthWrapper(),
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/guru/dashboard': (context) => const GuruDashboard(),
+          '/guru/manage-users': (context) => const UserManagementScreen(),
+          '/siswa/dashboard': (context) => const SiswaDashboard(),
+          '/orangtua/dashboard': (context) => const OrangtuaDashboardScreen(),
+          '/guru/feedback': (context) => const FeedbackListScreen(isParentMode: false),
+          '/orangtua/feedback': (context) => const FeedbackListScreen(isParentMode: true),
+        },
+      ),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize auth state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false).initializeAuth();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        switch (authProvider.status) {
+          case AuthStatus.loading:
+            return const SplashScreen();
+          
+          case AuthStatus.authenticated:
+            final user = authProvider.user!;
+            switch (user.role) {
+              case 'guru':
+                return const GuruDashboard();
+              case 'siswa':
+                return const SiswaDashboard();
+              case 'orangtua':
+                return const OrangtuaDashboardScreen();
+              default:
+                return const LoginScreen();
+            }
+          
+          case AuthStatus.unauthenticated:
+          default:
+            return const LoginScreen();
+        }
+      },
+    );
+  }
+}
