@@ -1,4 +1,4 @@
-// lib/screens/siswa/game_spelling_screen.dart - COMPLETE AUDIO IMPLEMENTATION
+// lib/screens/siswa/game_spelling_screen.dart - COMPLETE SCROLLABLE VERSION
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,7 +36,7 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
 
   VideoPlayerController? _videoController;
 
-  // ⚡ NEW: Audio Player
+  // ⚡ Audio Player
   AudioPlayer? _audioPlayer;
   bool _isPlayingAudio = false;
 
@@ -51,7 +51,7 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
   void initState() {
     super.initState();
     _initAnimations();
-    _initAudioPlayer(); // ⚡ NEW: Initialize audio
+    _initAudioPlayer();
     _startGame();
   }
 
@@ -61,21 +61,21 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
     _pulseController.dispose();
     _feedbackController.dispose();
     _videoController?.dispose();
-    _audioPlayer?.dispose(); // ⚡ NEW: Dispose audio
+    _audioPlayer?.dispose();
     super.dispose();
   }
 
-  // ⚡ NEW: Initialize audio player
+  // Initialize audio player
   void _initAudioPlayer() {
     _audioPlayer = AudioPlayer();
   }
 
-  // ⚡ NEW: Play audio method with web compatibility
+  // Play audio method with web compatibility
   Future<void> _playAudio(String audioPath) async {
     try {
       print('🔊 Attempting to play: $audioPath');
 
-      // ⚡ IMPORTANT: Clean path (remove duplicate assets/)
+      // Clean path (remove duplicate assets/)
       String cleanPath = audioPath;
       if (cleanPath.startsWith('assets/')) {
         cleanPath = cleanPath.substring(7); // Remove 'assets/' prefix
@@ -89,7 +89,7 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
         _isPlayingAudio = true;
       });
 
-      // ⚡ FIXED: Use clean path
+      // Use clean path
       await _audioPlayer?.play(AssetSource(cleanPath));
 
       print('✅ Audio command sent');
@@ -111,7 +111,7 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
     }
   }
 
-  // ⚡ NEW: Stop audio method
+  // Stop audio method
   Future<void> _stopAudio() async {
     await _audioPlayer?.stop();
     setState(() {
@@ -119,13 +119,13 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
     });
   }
 
-  // ⚡ NEW: Audio error handler
+  // Audio error handler
   void _showAudioError(String audioPath) {
     final audioText = _getAudioText(audioPath);
     _showMessage('Audio tidak dapat diputar. Silakan baca: $audioText');
   }
 
-  // ⚡ NEW: Audio fallback - show text instead
+  // Audio fallback - show text instead
   void _showAudioFallback(String audioPath) {
     final text = _getAudioText(audioPath);
     showDialog(
@@ -164,7 +164,7 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
     );
   }
 
-  // ⚡ NEW: Get audio text based on file path
+  // Get audio text based on file path
   String _getAudioText(String audioPath) {
     if (audioPath.contains('soal1')) return 'ibu beli sapu biru';
     if (audioPath.contains('soal2')) return 'aku suka baca buku';
@@ -467,22 +467,80 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
           }
 
           if (gameProvider.hasError) {
-            return _buildErrorState(gameProvider.error!);
+            return _buildScrollableContent(_buildErrorState(gameProvider.error!));
           }
 
           if (_showVideo &&
               gameProvider.hasVideo &&
               !gameProvider.videoWatched) {
-            return _buildVideoState(gameProvider);
+            return _buildScrollableContent(_buildVideoState(gameProvider));
           }
 
           if (gameProvider.currentQuestion == null) {
-            return _buildCompletedState();
+            return _buildScrollableContent(_buildCompletedState());
           }
 
           return _buildGameState(gameProvider);
         },
       ),
+    );
+  }
+
+  // ✅ NEW: Wrapper untuk content yang scrollable
+  Widget _buildScrollableContent(Widget content) {
+    return Column(
+      children: [
+        _buildHeader(),
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.zero,
+            child: Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height - 
+                          MediaQuery.of(context).padding.top - 
+                          kToolbarHeight - 40, // Approximate header height
+              ),
+              child: content,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ✅ MODIFIED: Game state dengan scrollable content
+  Widget _buildGameState(GameProvider gameProvider) {
+    return Stack(
+      children: [
+        Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.zero,
+                child: Container(
+                  width: double.infinity,
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height - 
+                              MediaQuery.of(context).padding.top - 
+                              kToolbarHeight - 40,
+                  ),
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: _buildQuestionContent(
+                        gameProvider.currentQuestion!, 
+                        gameProvider.currentOptions),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (_showFeedback) _buildFeedbackOverlay(),
+      ],
     );
   }
 
@@ -531,170 +589,149 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
   }
 
   Widget _buildVideoState(GameProvider gameProvider) {
-    return Column(
-      children: [
-        _buildHeader(),
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.paddingLG),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 300,
+              height: 200,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(AppSizes.radiusMD),
+              ),
+              child: _videoController != null &&
+                      _videoController!.value.isInitialized
+                  ? ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(AppSizes.radiusMD),
+                      child: VideoPlayer(_videoController!),
+                    )
+                  : Icon(
+                      Icons.play_circle_fill,
+                      size: 100,
+                      color: AppColors.siswaColor,
+                    ),
+            ),
+            const SizedBox(height: AppSizes.paddingLG),
+            Text(
+              'Video Pembelajaran (Opsional)',
+              style: AppTextStyles.h3,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.paddingMD),
+            Text(
+              'Tonton video pengenalan mengeja atau langsung main',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.paddingXL),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Container(
-                  width: 300,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-                  ),
-                  child: _videoController != null &&
-                          _videoController!.value.isInitialized
-                      ? ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(AppSizes.radiusMD),
-                          child: VideoPlayer(_videoController!),
-                        )
-                      : Icon(
-                          Icons.play_circle_fill,
-                          size: 100,
-                          color: AppColors.siswaColor,
-                        ),
-                ),
-                const SizedBox(height: AppSizes.paddingLG),
-                Text(
-                  'Video Pembelajaran (Opsional)',
-                  style: AppTextStyles.h3,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSizes.paddingMD),
-                Text(
-                  'Tonton video pengenalan mengeja atau langsung main',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSizes.paddingXL),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _videoController == null ||
-                                !_videoController!.value.isInitialized
-                            ? _initializeAndPlayVideo
-                            : () {
-                                setState(() {
-                                  _videoController!.value.isPlaying
-                                      ? _videoController!.pause()
-                                      : _videoController!.play();
-                                });
-                              },
-                        icon: Icon(
-                          _videoController != null &&
-                                  _videoController!.value.isPlaying
-                              ? Icons.pause
-                              : Icons.play_arrow,
-                        ),
-                        label: Text(
-                          _videoController == null ||
-                                  !_videoController!.value.isInitialized
-                              ? 'Tonton Video'
-                              : (_videoController!.value.isPlaying
-                                  ? 'Pause'
-                                  : 'Play'),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.siswaColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSizes.paddingMD,
-                          ),
-                        ),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _videoController == null ||
+                            !_videoController!.value.isInitialized
+                        ? _initializeAndPlayVideo
+                        : () {
+                            setState(() {
+                              _videoController!.value.isPlaying
+                                  ? _videoController!.pause()
+                                  : _videoController!.play();
+                            });
+                          },
+                    icon: Icon(
+                      _videoController != null &&
+                              _videoController!.value.isPlaying
+                          ? Icons.pause
+                          : Icons.play_arrow,
+                    ),
+                    label: Text(
+                      _videoController == null ||
+                              !_videoController!.value.isInitialized
+                          ? 'Tonton Video'
+                          : (_videoController!.value.isPlaying
+                              ? 'Pause'
+                              : 'Play'),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.siswaColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSizes.paddingMD,
                       ),
                     ),
-                    const SizedBox(width: AppSizes.paddingMD),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _skipToQuestions,
-                        icon: const Icon(Icons.skip_next),
-                        label: const Text('Langsung Main'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.siswaColor,
-                          side: BorderSide(color: AppColors.siswaColor),
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSizes.paddingMD,
-                          ),
-                        ),
+                  ),
+                ),
+                const SizedBox(width: AppSizes.paddingMD),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _skipToQuestions,
+                    icon: const Icon(Icons.skip_next),
+                    label: const Text('Langsung Main'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.siswaColor,
+                      side: BorderSide(color: AppColors.siswaColor),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSizes.paddingMD,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildCompletedState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle,
-            size: 120,
-            color: AppColors.success,
-          ),
-          const SizedBox(height: AppSizes.paddingLG),
-          Text(
-            'Semua Level Selesai!',
-            style: AppTextStyles.h2.copyWith(color: AppColors.success),
-          ),
-          const SizedBox(height: AppSizes.paddingMD),
-          Text(
-            'Kamu sudah menyelesaikan belajar mengeja',
-            style: AppTextStyles.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSizes.paddingXL),
-          ElevatedButton(
-            onPressed: _navigateToGameCompleted,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.paddingXL,
-                vertical: AppSizes.paddingMD,
-              ),
-            ),
-            child: const Text(
-              'Lihat Badge Mengeja',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGameState(GameProvider gameProvider) {
-    return Stack(
-      children: [
-        Column(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.paddingLG),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildHeader(),
-            Expanded(
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: _buildQuestionContent(
-                    gameProvider.currentQuestion!, gameProvider.currentOptions),
+            Icon(
+              Icons.check_circle,
+              size: 120,
+              color: AppColors.success,
+            ),
+            const SizedBox(height: AppSizes.paddingLG),
+            Text(
+              'Semua Level Selesai!',
+              style: AppTextStyles.h2.copyWith(color: AppColors.success),
+            ),
+            const SizedBox(height: AppSizes.paddingMD),
+            Text(
+              'Kamu sudah menyelesaikan belajar mengeja',
+              style: AppTextStyles.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.paddingXL),
+            ElevatedButton(
+              onPressed: _navigateToGameCompleted,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.paddingXL,
+                  vertical: AppSizes.paddingMD,
+                ),
+              ),
+              child: const Text(
+                'Lihat Badge Mengeja',
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
         ),
-        if (_showFeedback) _buildFeedbackOverlay(),
-      ],
+      ),
     );
   }
 
@@ -830,6 +867,9 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
             _buildLevel3Content(question)
           else
             _buildLevel1Content(question, options),
+          
+          // Extra spacing for better scrolling
+          const SizedBox(height: AppSizes.paddingXL),
         ],
       ),
     );
@@ -900,13 +940,9 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
 
         const SizedBox(height: AppSizes.paddingLG),
 
-        // Word pattern (e.g., "... + pu" or "bi + ...")
+        // Word pattern
         Consumer<GameProvider>(
           builder: (context, gameProvider, child) {
-            // Get word pattern from additional data
-            final additionalData =
-                gameProvider.currentSession?.game?.toString() ?? '';
-
             return Container(
               padding: const EdgeInsets.all(AppSizes.paddingLG),
               decoration: BoxDecoration(
@@ -940,45 +976,50 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
 
         const SizedBox(height: AppSizes.paddingMD),
 
-        // Syllable options
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: options.map((option) {
-            final isSelected = _selectedLetter == option.letter;
+        // Syllable options - ✅ MODIFIED: Responsive layout
+        Container(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: AppSizes.paddingMD,
+            runSpacing: AppSizes.paddingMD,
+            children: options.map((option) {
+              final isSelected = _selectedLetter == option.letter;
 
-            return GestureDetector(
-              onTap: () => _selectSyllable(option.letter),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue : Colors.white,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-                  border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.grey.shade300,
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
+              return GestureDetector(
+                onTap: () => _selectSyllable(option.letter),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.blue : Colors.white,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMD),
+                    border: Border.all(
+                      color: isSelected ? Colors.blue : Colors.grey.shade300,
+                      width: 3,
                     ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    option.letter,
-                    style: AppTextStyles.h2.copyWith(
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      option.letter,
+                      style: AppTextStyles.h2.copyWith(
+                        color: isSelected ? Colors.white : AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -990,39 +1031,6 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
     return Column(
       children: [
         // Image display
-        if (question.hasImage)
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-            ),
-            child: _buildQuestionImage(question),
-          )
-        else
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-            ),
-            child: Icon(
-              _getWordIcon(question.word),
-              size: 60,
-              color: Colors.orange,
-            ),
-          ),
-
-        const SizedBox(height: AppSizes.paddingLG),
-
         Text(
           'Susun suku kata menjadi: "${question.word}"',
           style: AppTextStyles.h4.copyWith(
@@ -1042,36 +1050,42 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
             borderRadius: BorderRadius.circular(AppSizes.radiusMD),
             border: Border.all(color: Colors.orange.withOpacity(0.3), width: 2),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(4, (index) {
-              final hasItem = index < _selectedSequence.length;
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(4, (index) {
+                final hasItem = index < _selectedSequence.length;
 
-              return GestureDetector(
-                onTap: hasItem ? () => _removeFromSequence(index) : null,
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: hasItem ? Colors.orange : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusSM),
-                    border: Border.all(
-                      color: hasItem ? Colors.orange : Colors.grey.shade300,
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      hasItem ? _selectedSequence[index] : '?',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: hasItem ? Colors.white : Colors.grey.shade400,
-                        fontWeight: FontWeight.bold,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: GestureDetector(
+                    onTap: hasItem ? () => _removeFromSequence(index) : null,
+                    child: Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: hasItem ? Colors.orange : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(AppSizes.radiusSM),
+                        border: Border.all(
+                          color: hasItem ? Colors.orange : Colors.grey.shade300,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          hasItem ? _selectedSequence[index] : '?',
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: hasItem ? Colors.white : Colors.grey.shade400,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         ),
 
@@ -1153,7 +1167,7 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
     );
   }
 
-  // ⚡ UPDATED: Level 3 with complete audio implementation
+  // Level 3 with complete audio implementation
   Widget _buildLevel3Content(GameQuestion question) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -1198,56 +1212,58 @@ class _GameSpellingScreenState extends State<GameSpellingScreen>
         const SizedBox(height: AppSizes.paddingXL),
 
         // Audio buttons
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Audio button
-            ElevatedButton.icon(
-              onPressed: () {
-                if (_isPlayingAudio) {
-                  _stopAudio();
-                } else {
-                  // ⚡ FIXED: Always try to play, with fallback
+        Container(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: AppSizes.paddingMD,
+            runSpacing: AppSizes.paddingMD,
+            children: [
+              // Audio button
+              ElevatedButton.icon(
+                onPressed: () {
+                  if (_isPlayingAudio) {
+                    _stopAudio();
+                  } else {
+                    final audioPath = question.audioWordPath ??
+                        'games/spelling/audio/sentences/soal1.mp3';
+                    _playAudio(audioPath);
+                  }
+                },
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    _isPlayingAudio ? Icons.stop : Icons.volume_up,
+                    key: ValueKey(_isPlayingAudio),
+                  ),
+                ),
+                label: Text(_isPlayingAudio ? 'Stop' : 'Dengarkan'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isPlayingAudio ? Colors.red : Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.paddingLG,
+                    vertical: AppSizes.paddingMD,
+                  ),
+                ),
+              ),
+
+              // Fallback text button
+              OutlinedButton.icon(
+                onPressed: () {
                   final audioPath = question.audioWordPath ??
                       'games/spelling/audio/sentences/soal1.mp3';
-                  _playAudio(audioPath);
-                }
-              },
-              icon: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: Icon(
-                  _isPlayingAudio ? Icons.stop : Icons.volume_up,
-                  key: ValueKey(_isPlayingAudio),
+                  _showAudioFallback(audioPath);
+                },
+                icon: const Icon(Icons.text_fields),
+                label: const Text('Lihat Teks'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.blue,
+                  side: const BorderSide(color: Colors.blue),
                 ),
               ),
-              label: Text(_isPlayingAudio ? 'Stop' : 'Dengarkan'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isPlayingAudio ? Colors.red : Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.paddingLG,
-                  vertical: AppSizes.paddingMD,
-                ),
-              ),
-            ),
-
-            const SizedBox(width: AppSizes.paddingMD),
-
-            // Fallback text button
-            OutlinedButton.icon(
-              onPressed: () {
-                final audioPath = question.audioWordPath ??
-                    'games/spelling/audio/sentences/soal1.mp3';
-                _showAudioFallback(audioPath);
-              },
-              icon: const Icon(Icons.text_fields),
-              label: const Text('Lihat Teks'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.blue,
-                side: const BorderSide(color: Colors.blue),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
 
         const SizedBox(height: AppSizes.paddingXL),

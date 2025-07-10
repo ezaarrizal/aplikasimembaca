@@ -796,10 +796,11 @@ class _GameHurufScreenState extends State<GameHurufScreen>
             ),
             child: Center(
               child: Text(
-                option.letter,
+                option.letter.toLowerCase(),
                 style: AppTextStyles.h1.copyWith(
                   color: isSelected ? Colors.white : AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
+                  fontFamily:'Aharoni',
                 ),
               ),
             ),

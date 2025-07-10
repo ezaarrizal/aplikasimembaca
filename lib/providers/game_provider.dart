@@ -45,7 +45,8 @@ class GameProvider extends ChangeNotifier {
   Map<String, dynamic> get additionalData => _additionalData;
   String? get wordPattern => _additionalData['word_pattern'] as String?;
   String? get fullWord => _additionalData['full_word'] as String?;
-  List<String>? get correctSequence => _additionalData['correct_sequence'] as List<String>?;
+  List<String>? get correctSequence =>
+      _additionalData['correct_sequence'] as List<String>?;
 
   // Video getters (optional)
   bool get hasVideo => _hasVideo;
@@ -65,7 +66,8 @@ class GameProvider extends ChangeNotifier {
   // ⚡ NEW: Game type detection
   bool get isSpellingGame => _currentSession?.game?.title == 'Belajar Mengeja';
   bool get isDetectiveGame => _currentSession?.game?.title == 'Detektif Huruf';
-  bool get isVocalGame => _currentSession?.game?.title == 'Permainan Huruf Vokal';
+  bool get isVocalGame =>
+      _currentSession?.game?.title == 'Permainan Huruf Vokal';
 
   // Load games method
   Future<void> loadGames() async {
@@ -146,12 +148,15 @@ class GameProvider extends ChangeNotifier {
     if (_currentSession == null) return false;
 
     try {
-      print('🎮 DEBUG: Loading current question for session ${_currentSession!.id}...');
-      
-      final response = await _gameService.getCurrentQuestion(_currentSession!.id);
+      print(
+          '🎮 DEBUG: Loading current question for session ${_currentSession!.id}...');
 
-      print('🎮 DEBUG: getCurrentQuestion response success: ${response.success}');
-      
+      final response =
+          await _gameService.getCurrentQuestion(_currentSession!.id);
+
+      print(
+          '🎮 DEBUG: getCurrentQuestion response success: ${response.success}');
+
       if (response.success) {
         if (response.allCompleted) {
           print('🎮 DEBUG: All questions completed');
@@ -165,27 +170,30 @@ class GameProvider extends ChangeNotifier {
         } else {
           print('🎮 DEBUG: Got question: ${response.question?.id}');
           print('🎮 DEBUG: Got ${response.options.length} options');
-          
+
           if (response.question == null) {
             throw Exception('Question data is null despite success response');
           }
-          
-          if (response.options.isEmpty && response.question!.safeQuestionType != 'read_sentence') {
+
+          if (response.options.isEmpty &&
+              response.question!.safeQuestionType != 'read_sentence') {
             // Only require options for non-reading questions
-            throw Exception('No options received for question ${response.question!.id}');
+            throw Exception(
+                'No options received for question ${response.question!.id}');
           }
-          
+
           // Log options for debugging
           for (int i = 0; i < response.options.length; i++) {
             final option = response.options[i];
             print('🔍 DEBUG: Option $i: ${option.letter}');
           }
-          
+
           _currentQuestion = response.question;
           _currentOptions = response.options;
           _currentProgress = response.progress;
-          _additionalData = response.additionalData; // ⚡ NEW: Store additional data
-          
+          _additionalData =
+              response.additionalData; // ⚡ NEW: Store additional data
+
           if (response.session != null) {
             _currentSession = response.session;
           }
@@ -199,7 +207,6 @@ class GameProvider extends ChangeNotifier {
         _setError(null);
         notifyListeners();
         return true;
-        
       } else {
         print('🚨 ERROR: getCurrentQuestion failed: ${response.message}');
         _setError(response.message);
@@ -223,8 +230,9 @@ class GameProvider extends ChangeNotifier {
     }
 
     try {
-      print('🎮 DEBUG: Submitting answer: $selectedLetter for question ${_currentQuestion!.id}');
-      
+      print(
+          '🎮 DEBUG: Submitting answer: $selectedLetter for question ${_currentQuestion!.id}');
+
       final submission = AnswerSubmission(
         selectedLetter: selectedLetter,
         teacherObservation: teacherObservation,
@@ -251,11 +259,12 @@ class GameProvider extends ChangeNotifier {
 
         if (response.isCorrect) {
           print('🎮 DEBUG: Answer is correct, updating session state');
-          
+
           List<int> completed = List.from(_currentSession!.questionsCompleted);
           if (!completed.contains(_currentQuestion!.id)) {
             completed.add(_currentQuestion!.id);
-            print('🎮 DEBUG: Added question ${_currentQuestion!.id} to completed list');
+            print(
+                '🎮 DEBUG: Added question ${_currentQuestion!.id} to completed list');
           }
 
           _currentSession = GameSession(
@@ -277,9 +286,10 @@ class GameProvider extends ChangeNotifier {
             updatedAt: _currentSession!.updatedAt,
             game: _currentSession!.game,
           );
-          
-          print('🎮 DEBUG: Updated session with ${completed.length} completed questions');
-          
+
+          print(
+              '🎮 DEBUG: Updated session with ${completed.length} completed questions');
+
           if (response.sessionCompleted) {
             print('🎮 DEBUG: Session completed!');
           }
@@ -288,7 +298,6 @@ class GameProvider extends ChangeNotifier {
         _setError(null);
         notifyListeners();
         return result;
-        
       } else {
         print('🚨 ERROR: Submit answer failed: ${response.message}');
         _setError(response.message);
@@ -309,14 +318,16 @@ class GameProvider extends ChangeNotifier {
     String? teacherObservation,
   }) async {
     if (_currentSession == null || _currentQuestion == null) {
-      print('🚨 ERROR: Cannot submit detective answer - session or question is null');
+      print(
+          '🚨 ERROR: Cannot submit detective answer - session or question is null');
       _setError('Session atau pertanyaan tidak valid');
       return null;
     }
 
     try {
-      print('🕵️ DEBUG: Submitting detective answer: $selectedLetter (teacher says: ${isCorrect ? "CORRECT" : "WRONG"})');
-      
+      print(
+          '🕵️ DEBUG: Submitting detective answer: $selectedLetter (teacher says: ${isCorrect ? "CORRECT" : "WRONG"})');
+
       final submission = DetectiveAnswerSubmission(
         selectedLetter: selectedLetter,
         isCorrect: isCorrect,
@@ -331,7 +342,8 @@ class GameProvider extends ChangeNotifier {
         submission,
       );
 
-      print('🕵️ DEBUG: Submit detective answer response success: ${response.success}');
+      print(
+          '🕵️ DEBUG: Submit detective answer response success: ${response.success}');
       print('🕵️ DEBUG: Can retry: ${response.canRetry}');
 
       if (response.success) {
@@ -345,11 +357,12 @@ class GameProvider extends ChangeNotifier {
 
         // DETECTIVE LOGIC: Always mark as attempted (regardless of correctness)
         print('🕵️ DEBUG: Marking question as attempted for detective game');
-        
+
         List<int> completed = List.from(_currentSession!.questionsCompleted);
         if (!completed.contains(_currentQuestion!.id)) {
           completed.add(_currentQuestion!.id);
-          print('🕵️ DEBUG: Added question ${_currentQuestion!.id} to completed list');
+          print(
+              '🕵️ DEBUG: Added question ${_currentQuestion!.id} to completed list');
         }
 
         _currentSession = GameSession(
@@ -363,17 +376,17 @@ class GameProvider extends ChangeNotifier {
           videoWatched: _currentSession!.videoWatched,
           videoCompletedAt: _currentSession!.videoCompletedAt,
           questionsCompleted: completed,
-          status: response.sessionCompleted
-              ? 'completed'
-              : _currentSession!.status,
+          status:
+              response.sessionCompleted ? 'completed' : _currentSession!.status,
           teacherNotes: _currentSession!.teacherNotes,
           createdAt: _currentSession!.createdAt,
           updatedAt: _currentSession!.updatedAt,
           game: _currentSession!.game,
         );
-        
-        print('🕵️ DEBUG: Updated detective session with ${completed.length} completed questions');
-        
+
+        print(
+            '🕵️ DEBUG: Updated detective session with ${completed.length} completed questions');
+
         if (response.sessionCompleted) {
           print('🕵️ DEBUG: Detective session completed!');
         }
@@ -381,7 +394,6 @@ class GameProvider extends ChangeNotifier {
         _setError(null);
         notifyListeners();
         return result;
-        
       } else {
         print('🚨 ERROR: Submit detective answer failed: ${response.message}');
         _setError(response.message);
@@ -403,7 +415,8 @@ class GameProvider extends ChangeNotifier {
     String actionType = 'answer',
   }) async {
     if (_currentSession == null || _currentQuestion == null) {
-      print('🚨 ERROR: Cannot submit spelling answer - session or question is null');
+      print(
+          '🚨 ERROR: Cannot submit spelling answer - session or question is null');
       _setError('Session atau pertanyaan tidak valid');
       return null;
     }
@@ -413,7 +426,7 @@ class GameProvider extends ChangeNotifier {
       print('📚 DEBUG: Selected letter: $selectedLetter');
       print('📚 DEBUG: Selected sequence: $selectedSequence');
       print('📚 DEBUG: Action type: $actionType');
-      
+
       final submission = SpellingAnswerSubmission(
         selectedLetter: selectedLetter,
         selectedSequence: selectedSequence,
@@ -429,7 +442,8 @@ class GameProvider extends ChangeNotifier {
         submission,
       );
 
-      print('📚 DEBUG: Submit spelling answer response success: ${response.success}');
+      print(
+          '📚 DEBUG: Submit spelling answer response success: ${response.success}');
       print('📚 DEBUG: Is correct: ${response.isCorrect}');
 
       if (response.success) {
@@ -443,15 +457,16 @@ class GameProvider extends ChangeNotifier {
 
         // SPELLING LOGIC: Update based on question type
         final questionType = _currentQuestion!.safeQuestionType;
-        
+
         if (questionType == 'read_sentence' || response.isCorrect) {
           // Mark as completed for reading sentences or correct answers
           print('📚 DEBUG: Marking question as completed');
-          
+
           List<int> completed = List.from(_currentSession!.questionsCompleted);
           if (!completed.contains(_currentQuestion!.id)) {
             completed.add(_currentQuestion!.id);
-            print('📚 DEBUG: Added question ${_currentQuestion!.id} to completed list');
+            print(
+                '📚 DEBUG: Added question ${_currentQuestion!.id} to completed list');
           }
 
           _currentSession = GameSession(
@@ -473,9 +488,10 @@ class GameProvider extends ChangeNotifier {
             updatedAt: _currentSession!.updatedAt,
             game: _currentSession!.game,
           );
-          
-          print('📚 DEBUG: Updated spelling session with ${completed.length} completed questions');
-          
+
+          print(
+              '📚 DEBUG: Updated spelling session with ${completed.length} completed questions');
+
           if (response.sessionCompleted) {
             print('📚 DEBUG: Spelling session completed!');
           }
@@ -484,7 +500,6 @@ class GameProvider extends ChangeNotifier {
         _setError(null);
         notifyListeners();
         return result;
-        
       } else {
         print('🚨 ERROR: Submit spelling answer failed: ${response.message}');
         _setError(response.message);
@@ -503,7 +518,8 @@ class GameProvider extends ChangeNotifier {
     if (_currentSession == null) return null;
 
     try {
-      final response = await _gameService.getSessionResults(_currentSession!.id);
+      final response =
+          await _gameService.getSessionResults(_currentSession!.id);
 
       if (response.success) {
         if (response.session != null) {

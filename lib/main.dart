@@ -24,8 +24,15 @@ import 'screens/feedback/feedback_list_screen.dart';
 import 'screens/feedback/create_feedback_screen.dart';
 import 'screens/feedback/feedback_detail_screen.dart';
 import 'screens/guru/user_management_screen.dart';
+import 'config/api_config.dart';
 
 void main() {
+  print('🚀 APP STARTING...');
+  ApiConfig.debugCurrentUrl();
+  print('🔍 Login Endpoint: ${ApiConfig.loginEndpoint}');
+  print('🔍 Games Endpoint: ${ApiConfig.gamesEndpoint}');
+  print('🔍 Users Endpoint: ${ApiConfig.usersEndpoint}');
+
   runApp(const MyApp());
 }
 

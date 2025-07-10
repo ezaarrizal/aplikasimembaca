@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class AppConstants {
   // 👈 EXISTING: API Constants - Pastikan URL ini sesuai dengan server Laravel Anda
-  static const String baseUrl = 'http://localhost:8000/api/v1'; // Untuk development
+  static const String baseUrl = 'https://echo-web-production-5353.up.railway.app/api/v1'; // Untuk development
   // static const String baseUrl = 'http://192.168.1.100:8000/api/v1'; // Untuk testing di device fisik
   // static const String baseUrl = 'https://yourdomain.com/api/v1'; // Untuk production
   
@@ -19,6 +19,7 @@ class AppConstants {
   static const String sessionResultsEndpoint = '/siswa/games/sessions/{sessionId}/results';
   static const String markVideoWatchedEndpoint = '/siswa/games/sessions/{sessionId}/mark-video-watched';
   static const String badgesEndpoint = '/siswa/badges';
+  
   
   // Storage Keys
   static const String tokenKey = 'auth_token';

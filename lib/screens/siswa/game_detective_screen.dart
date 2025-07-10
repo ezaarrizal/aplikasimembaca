@@ -1,4 +1,4 @@
-// lib/screens/siswa/game_detective_screen.dart - USING UNIFIED DIALOG
+// lib/screens/siswa/game_detective_screen.dart - COMPLETE SCROLLABLE VERSION
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -250,16 +250,76 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
           }
 
           if (gameProvider.hasError) {
-            return _buildErrorState(gameProvider.error!);
+            return _buildScrollableContent(
+                _buildErrorState(gameProvider.error!));
           }
 
           if (gameProvider.currentQuestion == null) {
-            return _buildCompletedState();
+            return _buildScrollableContent(_buildCompletedState());
           }
 
           return _buildGameState(gameProvider);
         },
       ),
+    );
+  }
+
+  // ✅ NEW: Wrapper untuk content yang scrollable
+  Widget _buildScrollableContent(Widget content) {
+    return Column(
+      children: [
+        _buildHeader(),
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.zero,
+            child: Container(
+              width: double.infinity,
+              constraints: BoxConstraints(
+                minHeight: MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    kToolbarHeight -
+                    40, // Approximate header height
+              ),
+              child: content,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ✅ MODIFIED: Game state dengan scrollable content
+  Widget _buildGameState(GameProvider gameProvider) {
+    return Stack(
+      children: [
+        Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.zero,
+                child: Container(
+                  width: double.infinity,
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height -
+                        MediaQuery.of(context).padding.top -
+                        kToolbarHeight -
+                        40,
+                  ),
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: _buildQuestionContent(gameProvider.currentQuestion!,
+                        gameProvider.currentOptions),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (_showFeedback) _buildFeedbackOverlay(),
+      ],
     );
   }
 
@@ -309,62 +369,45 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
 
   Widget _buildCompletedState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle,
-            size: 120,
-            color: AppColors.success,
-          ),
-          const SizedBox(height: AppSizes.paddingLG),
-          Text(
-            'Semua Kasus Selesai!',
-            style: AppTextStyles.h2.copyWith(color: AppColors.success),
-          ),
-          const SizedBox(height: AppSizes.paddingMD),
-          Text(
-            'Kamu sudah menyelesaikan semua kasus detektif huruf',
-            style: AppTextStyles.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSizes.paddingXL),
-          ElevatedButton(
-            onPressed: _navigateToGameCompleted,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.paddingXL,
-                vertical: AppSizes.paddingMD,
-              ),
-            ),
-            child: const Text(
-              'Lihat Badge Detektif',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGameState(GameProvider gameProvider) {
-    return Stack(
-      children: [
-        Column(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSizes.paddingLG),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildHeader(),
-            Expanded(
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: _buildQuestionContent(
-                    gameProvider.currentQuestion!, gameProvider.currentOptions),
+            Icon(
+              Icons.check_circle,
+              size: 120,
+              color: AppColors.success,
+            ),
+            const SizedBox(height: AppSizes.paddingLG),
+            Text(
+              'Semua Kasus Selesai!',
+              style: AppTextStyles.h2.copyWith(color: AppColors.success),
+            ),
+            const SizedBox(height: AppSizes.paddingMD),
+            Text(
+              'Kamu sudah menyelesaikan semua kasus detektif huruf',
+              style: AppTextStyles.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSizes.paddingXL),
+            ElevatedButton(
+              onPressed: _navigateToGameCompleted,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.paddingXL,
+                  vertical: AppSizes.paddingMD,
+                ),
+              ),
+              child: const Text(
+                'Lihat Badge Detektif',
+                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
         ),
-        if (_showFeedback) _buildFeedbackOverlay(),
-      ],
+      ),
     );
   }
 
@@ -500,6 +543,9 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
             _buildLevel3Content(question, options)
           else
             _buildDefaultContent(question, options),
+
+          // Extra spacing for better scrolling
+          const SizedBox(height: AppSizes.paddingXL),
         ],
       ),
     );
@@ -544,45 +590,54 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
           ),
         ),
         const SizedBox(height: AppSizes.paddingLG),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: options.map((option) {
-            final isSelected = _selectedLetter == option.letter;
 
-            return GestureDetector(
-              onTap: () => _selectLetter(option.letter),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.green : Colors.white,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-                  border: Border.all(
-                    color: isSelected ? Colors.green : Colors.grey.shade300,
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
+        // ✅ MODIFIED: Responsive layout dengan Wrap
+        Container(
+          width: double.infinity,
+          child: Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: AppSizes.paddingMD,
+            runSpacing: AppSizes.paddingMD,
+            children: options.map((option) {
+              final isSelected = _selectedLetter == option.letter;
+
+              return GestureDetector(
+                onTap: () => _selectLetter(option.letter),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.green : Colors.white,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusMD),
+                    border: Border.all(
+                      color: isSelected ? Colors.green : Colors.grey.shade300,
+                      width: 3,
                     ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    option.letter,
-                    style: AppTextStyles.h1.copyWith(
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      option.letter,
+                      style: AppTextStyles.h1.copyWith(
+                        color:
+                            isSelected ? Colors.white : AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
+
         const SizedBox(height: AppSizes.paddingLG),
         Text(
           'Petunjuk: Cari huruf yang tampil hanya sekali!',
@@ -646,50 +701,56 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
 
         const SizedBox(height: AppSizes.paddingMD),
 
-        // Options
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 1,
-            mainAxisSpacing: AppSizes.paddingMD,
-            crossAxisSpacing: AppSizes.paddingMD,
-          ),
-          itemCount: options.length,
-          itemBuilder: (context, index) {
-            final option = options[index];
-            final isSelected = _selectedLetter == option.letter;
-
-            return GestureDetector(
-              onTap: () => _selectLetter(option.letter),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.orange : Colors.white,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-                  border: Border.all(
-                    color: isSelected ? Colors.orange : Colors.grey.shade300,
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    option.letter,
-                    style: AppTextStyles.h2.copyWith(
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+        // ✅ MODIFIED: Better grid layout dengan constraints
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 1,
+                mainAxisSpacing: AppSizes.paddingMD,
+                crossAxisSpacing: AppSizes.paddingMD,
               ),
+              itemCount: options.length,
+              itemBuilder: (context, index) {
+                final option = options[index];
+                final isSelected = _selectedLetter == option.letter;
+
+                return GestureDetector(
+                  onTap: () => _selectLetter(option.letter),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.orange : Colors.white,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMD),
+                      border: Border.all(
+                        color:
+                            isSelected ? Colors.orange : Colors.grey.shade300,
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        option.letter,
+                        style: AppTextStyles.h2.copyWith(
+                          color:
+                              isSelected ? Colors.white : AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),
@@ -718,7 +779,7 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
           ),
           child: Column(
             children: [
-              // ✅ FIXED: Image handling yang benar
+              // Image handling
               Container(
                 width: 120,
                 height: 120,
@@ -736,48 +797,54 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
               const SizedBox(height: AppSizes.paddingLG),
 
               // Word with missing letter
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AnimatedBuilder(
-                    animation: _pulseAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _pulseAnimation.value,
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withOpacity(0.3),
-                            borderRadius:
-                                BorderRadius.circular(AppSizes.radiusSM),
-                            border: Border.all(
-                              color: Colors.purple,
-                              width: 2,
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '?',
-                              style: AppTextStyles.h2.copyWith(
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _pulseAnimation.value,
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.purple.withOpacity(0.3),
+                              borderRadius:
+                                  BorderRadius.circular(AppSizes.radiusSM),
+                              border: Border.all(
                                 color: Colors.purple,
-                                fontWeight: FontWeight.bold,
+                                width: 2,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '?',
+                                style: AppTextStyles.h2.copyWith(
+                                  color: Colors.purple,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    question.word.substring(1).toLowerCase(),
-                    style: AppTextStyles.h2.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                        );
+                      },
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        question.word.substring(1).toLowerCase(),
+                        style: AppTextStyles.h2.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -795,50 +862,56 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
 
         const SizedBox(height: AppSizes.paddingMD),
 
-        // Letter options (unchanged)
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 1,
-            mainAxisSpacing: AppSizes.paddingMD,
-            crossAxisSpacing: AppSizes.paddingMD,
-          ),
-          itemCount: options.length,
-          itemBuilder: (context, index) {
-            final option = options[index];
-            final isSelected = _selectedLetter == option.letter;
-
-            return GestureDetector(
-              onTap: () => _selectLetter(option.letter),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.purple : Colors.white,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-                  border: Border.all(
-                    color: isSelected ? Colors.purple : Colors.transparent,
-                    width: 3,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    option.letter,
-                    style: AppTextStyles.h1.copyWith(
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+        // ✅ MODIFIED: Better grid layout dengan constraints
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 1,
+                mainAxisSpacing: AppSizes.paddingMD,
+                crossAxisSpacing: AppSizes.paddingMD,
               ),
+              itemCount: options.length,
+              itemBuilder: (context, index) {
+                final option = options[index];
+                final isSelected = _selectedLetter == option.letter;
+
+                return GestureDetector(
+                  onTap: () => _selectLetter(option.letter),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.purple : Colors.white,
+                      borderRadius: BorderRadius.circular(AppSizes.radiusMD),
+                      border: Border.all(
+                        color: isSelected ? Colors.purple : Colors.transparent,
+                        width: 3,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        option.letter.toLowerCase(),
+                        style: AppTextStyles.h1.copyWith(
+                          color:
+                              isSelected ? Colors.white : AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Aharoni',
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             );
           },
         ),
@@ -846,7 +919,7 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
     );
   }
 
-// ✅ NEW: Method untuk menampilkan gambar yang benar
+  // ✅ Method untuk menampilkan gambar yang benar
   Widget _buildQuestionImage(GameQuestion question) {
     print('🖼️ DEBUG: Question ID: ${question.id}');
     print('🖼️ DEBUG: Word: ${question.word}');
@@ -859,13 +932,12 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
       final imagePath = question.imagePath!.trim();
       print('🖼️ DEBUG: Cleaned image path: $imagePath');
 
-      // ✅ COPY EXACT LOGIC dari Vocal Game yang working
       if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         // Network image dari server
         print('🖼️ DEBUG: Loading as NETWORK image');
         return _buildNetworkImage(imagePath, question.word);
       } else {
-        // Local asset (bundled dengan app) - SAMA seperti Vocal Game
+        // Local asset (bundled dengan app)
         print('🖼️ DEBUG: Loading as LOCAL ASSET');
         return _buildLocalAssetImage(imagePath, question.word);
       }
@@ -1012,7 +1084,7 @@ class _GameDetectiveScreenState extends State<GameDetectiveScreen>
     );
   }
 
-// ✅ NEW: Fallback icon jika gambar tidak tersedia
+  // Fallback icon jika gambar tidak tersedia
   Widget _buildFallbackIcon(String word) {
     return Container(
       width: 120,

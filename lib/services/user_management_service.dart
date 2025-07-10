@@ -8,7 +8,8 @@ import '../models/user_list_response.dart';
 import 'storage_service.dart';
 
 class UserManagementService {
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl =
+      'https://echo-web-production-5353.up.railway.app/api/v1';
   final StorageService _storageService = StorageService();
 
   // Headers untuk API calls
@@ -39,8 +40,9 @@ class UserManagementService {
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
       if (status != null) queryParams['status'] = status;
 
-      final uri = Uri.parse('$baseUrl/guru/users').replace(queryParameters: queryParams);
-      
+      final uri = Uri.parse('$baseUrl/guru/users')
+          .replace(queryParameters: queryParams);
+
       final response = await http.get(uri, headers: await _getHeaders());
       final Map<String, dynamic> responseData = jsonDecode(response.body);
 
